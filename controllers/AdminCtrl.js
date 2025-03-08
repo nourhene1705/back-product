@@ -1,63 +1,48 @@
-let Admin = require ("../models/AdminModel")
-let bcrypt = require ("bcrypt")
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const Admin = require("../models/AdminModel");
+const User = require("../models/User");
+
 const AdminCtrl = {
+
   login: async (req, res) => {
     try {
-      let { email, password } = req.body;
+      const { email, password } = req.body;
 
-      let findAdmin = await Admin.findOne({ email });
+      const findAdmin = await Admin.findOne({ email });
 
       if (!findAdmin) {
         return res.status(401).json({ message: "L'email est incorrect" });
       }
-
-      let compare = await bcrypt.compare(password, findAdmin.password);
-
+      const compare = await bcrypt.compare(password, findAdmin.password);
       if (!compare) {
         return res.status(401).json({ message: "Le mot de passe est incorrect" });
       }
 
-      const tokenData = {
-        _id: findAdmin._id,
-        email: findAdmin.email,
-      };
-
-      const token = await jwt.sign(tokenData, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: 60 * 60 * 2,
-      });
-
-      const tokenOption = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production", 
-      };
-
-      res.cookie("token", token, tokenOption).status(200).json({
-        message: "Connexion réussie",
-        data: token,
-        success: true,
-        error: false,
-      });
+     
+      const token = jwt.sign(
+        { _id: findAdmin._id, email: findAdmin.email},
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "2h" }
+      );
+      res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production" })
+        .status(200)
+        .json({ message: "Connexion réussie", token, success: true });
     } catch (error) {
-      res.status(500).json({
-        message: error.message || error,
-        success: false,
-        error: true,
-      });
+      res.status(500).json({ message: error.message, success: false });
     }
   },
 
+ 
   logout: (req, res) => {
-    res.clearCookie("token").status(200).json({
-      message: "Déconnexion réussie",
-      success: true,
-      error: false,
-    });
+    res.clearCookie("token").status(200).json({ message: "Déconnexion réussie", success: true });
   },
+
 
   addAdmin: async (req, res) => {
     try {
       const { email, password } = req.body;
-      
+
       let existingAdmin = await Admin.findOne({ email });
       if (existingAdmin) {
         return res.status(400).json({ message: "Admin existe déjà" });
@@ -73,14 +58,6 @@ const AdminCtrl = {
     }
   },
 
-  getAllAdmins: async (req, res) => {
-    try {
-      const admins = await Admin.find();
-      res.status(200).json(admins);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  },
 
   updateAdmin: async (req, res) => {
     try {
@@ -98,6 +75,17 @@ const AdminCtrl = {
       res.status(500).json({ message: error.message });
     }
   },
+
+getAllUsers: async (req, res) => {
+  try {
+    const users = await User.find(); 
+    const emails = users.map(user => user.email); 
+    res.json({ emails });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Error fetching users" });
+  }
+},
 
   deleteAdmin: async (req, res) => {
     try {

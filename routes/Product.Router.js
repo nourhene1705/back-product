@@ -1,11 +1,15 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const ProductCtrl = require('../controllers/ProductCtrl');
-const verifyRole = require('../middleware/permission');
+const verifyToken = require("../middleware/auth"); 
+const verifyRole = require("../middleware/permission");  
+const ProductCtrl = require("../controllers/ProductCtrl");
 
-// Protected Routes (existe juste pour les admins)
-router.post('/product', verifyRole('admin'), ProductCtrl.addProduct);
-router.get('/products', verifyRole('admin'), ProductCtrl.getAllProducts);
+router.post("/", verifyToken, verifyRole('admin'), ProductCtrl.ajouterProduit);
+
+router.get("/", ProductCtrl.obtenirTousLesProduits);
+
+router.put("/:id", verifyToken, verifyRole('admin'), ProductCtrl.mettreAJourProduit);
+
+router.delete("/:id", verifyToken, verifyRole('admin'), ProductCtrl.supprimerProduit);
 
 module.exports = router;
-
